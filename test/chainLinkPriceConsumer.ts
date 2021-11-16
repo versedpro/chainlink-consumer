@@ -3,7 +3,7 @@ import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { chainLink } from "../settings";
 
-describe("ChainLinkPriceConsumer", function () {
+describe("ChainLinkPriceConsumer", async () => {
 
   let priceConsumer: Contract;
 
@@ -12,35 +12,60 @@ describe("ChainLinkPriceConsumer", function () {
       "ChainLinkPriceConsumer"
     );
 
-    priceConsumer = await ChainLinkPriceConsumer.deploy(
-      chainLink.testnet.BNBUSD
-    );
+    priceConsumer = await ChainLinkPriceConsumer.deploy();
     await priceConsumer.deployed();
+
+    const MockAggregatorV3 = await ethers.getContractFactory(
+      "MockAggregatorV3"
+    );
+
+    await Object.values(chainLink.testnet).reduce(
+      async (promise, value, currentIndex) => {
+      await promise;
+      const address = value;
+      if (address.length < 1) return;
+      const pairId = currentIndex + 1;
+
+      const mockAggregatorV3 = await MockAggregatorV3.deploy();
+      await mockAggregatorV3.deployed();
+
+      await priceConsumer.registerPriceFeed(
+        pairId,
+        mockAggregatorV3.address
+      );
+    }, Promise.resolve());
   });
 
   it("should return latest round data", async () => {
-    const [
-      roundId,
-      answer,
-      startedAt,
-      updatedAt,
-      answeredInRound
-    ] = await priceConsumer.getLatestRoundData();
 
-    console.log('roundId', roundId);
-    console.log('answer', answer);
-    console.log('startedAt', startedAt);
-    console.log('updatedAt', updatedAt);
-    console.log('answeredInRound', answeredInRound);
+    await Object.values(chainLink.testnet).reduce(async (
+      promise, value, currentIndex
+    ) => {
+      await promise;
+      const address = value;
+      if (address.length < 1) return;
 
-    expect(answer > 0).to.equal(true, "unexpected answer.")
+      const [
+        roundId,
+        answer,
+        startedAt,
+        updatedAt,
+        answeredInRound
+      ] = await priceConsumer.getLatestRoundData(currentIndex + 1);
+  
+      expect(answer > 0).to.equal(true, "unexpected answer.");
+    }, Promise.resolve());
   });
 
   it("should return latest price", async () => {
-    const price = await priceConsumer.getLatestPrice();
-
-    console.log('price', price.toString());
-
-    expect(price > 0).to.equal(true, "unexpected price.")
+    await Object.values(chainLink.testnet).reduce(async (
+      promise, value, currentIndex
+    ) => {
+      await promise;
+      const address = value;
+      if (address.length < 1) return;
+      const price = await priceConsumer.getLatestPrice(currentIndex + 1);
+      expect(price > 0).to.equal(true, "unexpected price.");
+    }, Promise.resolve());
   });
 });
