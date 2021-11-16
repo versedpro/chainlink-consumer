@@ -1,11 +1,15 @@
 //SPDX-License-Identifier: Unlicense
 
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 interface IPriceConsumer {
     /**
      * @notice Returns the latest price
+     * @param _pair Supported currency pair
      * @return latest price
      */
-    function getLatestPrice() external view returns (uint256);
+    function getLatestPrice(uint32 _pair)
+        external
+        view
+        returns (uint256);
 }

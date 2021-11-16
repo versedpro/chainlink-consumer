@@ -16,7 +16,6 @@ async function main() {
   }
 
   if (network.name === "testnet" || network.name === "mainnet") {
-  
     // Saving the info to be logged in the table (deployer address)
     const deployerLog = { Label: 'Deploying Address', Info: deployer.address };
     // Saving the info to be logged in the table (deployer address)
@@ -29,19 +28,15 @@ async function main() {
       "ChainLinkPriceConsumer"
     );
 
-    const priceConsumerInst = await ChainLinkPriceConsumerFactory.deploy(
-      chainLink[network.name].BNBUSD
-    );
-
+    // Deploy the contract
+    const priceConsumerInst = await ChainLinkPriceConsumerFactory.deploy();
     await priceConsumerInst.deployed();
 
     try {
-      // Verifies the contracts
+      // Verify the contract
       await run('verify:verify', {
         address: priceConsumerInst.address,
-        constructorArguments: [
-          chainLink[network.name].BNBUSD
-        ],
+        constructorArguments: [],
       });
 
     } catch (error) {
@@ -51,6 +46,16 @@ async function main() {
         console.error(error);
       }
     }
+
+    // Set the contract functions
+    await Object.values(chainLink[network.name]).reduce(
+      async (promise, value, currentIndex) => {
+      await promise;
+      const address = value;
+      if (address.length < 1) return;
+      const pairId = currentIndex + 1;
+      await priceConsumerInst.registerPriceFeed(pairId, address);
+    }, Promise.resolve());
 
     const priceConsumerLog = {
       Label: 'Deployed Price Consumer Token Address',
