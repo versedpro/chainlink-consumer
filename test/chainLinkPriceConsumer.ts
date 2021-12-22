@@ -4,7 +4,6 @@ import { ethers } from "hardhat";
 import { chainLink } from "../settings";
 
 describe("ChainLinkPriceConsumer", async () => {
-
   let priceConsumer: Contract;
 
   beforeEach(async () => {
@@ -21,51 +20,57 @@ describe("ChainLinkPriceConsumer", async () => {
 
     await Object.values(chainLink.testnet).reduce(
       async (promise, value, currentIndex) => {
-      await promise;
-      const address = value;
-      if (address.length < 1) return;
-      const pairId = currentIndex + 1;
+        await promise;
+        const address = value.aggregator;
+        if (address.length < 1) return;
+        const pairId = value.pair;
+        if (pairId.length < 1) return;
+        const digits = value.digits;
 
-      const mockAggregatorV3 = await MockAggregatorV3.deploy();
-      await mockAggregatorV3.deployed();
+        const mockAggregatorV3 = await MockAggregatorV3.deploy();
+        await mockAggregatorV3.deployed();
 
-      await priceConsumer.registerPriceFeed(
-        pairId,
-        mockAggregatorV3.address
-      );
-    }, Promise.resolve());
+        await priceConsumer.registerPriceFeed(
+          pairId,
+          mockAggregatorV3.address,
+          digits
+        );
+      },
+      Promise.resolve()
+    );
   });
 
   it("should return latest round data", async () => {
+    await Object.values(chainLink.testnet).reduce(
+      async (promise, value, currentIndex) => {
+        await promise;
+        const address = value.aggregator;
+        if (address.length < 1) return;
+        const pairId = value.pair;
+        if (pairId.length < 1) return;
 
-    await Object.values(chainLink.testnet).reduce(async (
-      promise, value, currentIndex
-    ) => {
-      await promise;
-      const address = value;
-      if (address.length < 1) return;
+        const [roundId, answer, startedAt, updatedAt, answeredInRound] =
+          await priceConsumer.getLatestRoundData(pairId);
 
-      const [
-        roundId,
-        answer,
-        startedAt,
-        updatedAt,
-        answeredInRound
-      ] = await priceConsumer.getLatestRoundData(currentIndex + 1);
-  
-      expect(answer > 0).to.equal(true, "unexpected answer.");
-    }, Promise.resolve());
+        expect(answer > 0).to.equal(true, "unexpected answer.");
+      },
+      Promise.resolve()
+    );
   });
 
   it("should return latest price", async () => {
-    await Object.values(chainLink.testnet).reduce(async (
-      promise, value, currentIndex
-    ) => {
-      await promise;
-      const address = value;
-      if (address.length < 1) return;
-      const price = await priceConsumer.getLatestPrice(currentIndex + 1);
-      expect(price > 0).to.equal(true, "unexpected price.");
-    }, Promise.resolve());
+    await Object.values(chainLink.testnet).reduce(
+      async (promise, value, currentIndex) => {
+        await promise;
+        const address = value.aggregator;
+        if (address.length < 1) return;
+        const pairId = value.pair;
+        if (pairId.length < 1) return;
+
+        const price = await priceConsumer.getLatestPrice(pairId);
+        expect(price > 0).to.equal(true, "unexpected price.");
+      },
+      Promise.resolve()
+    );
   });
 });

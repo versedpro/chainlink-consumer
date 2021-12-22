@@ -6,7 +6,7 @@ import { chainLink } from "../settings";
 async function main() {
   const signers = await ethers.getSigners();
   let deployer: SignerWithAddress | undefined;
-  signers.forEach(signer => {
+  signers.forEach((signer) => {
     if (signer.address === process.env.DEPLOYER_ADDRESS) {
       deployer = signer;
     }
@@ -17,10 +17,10 @@ async function main() {
 
   if (network.name === "testnet" || network.name === "mainnet") {
     // Saving the info to be logged in the table (deployer address)
-    const deployerLog = { Label: 'Deploying Address', Info: deployer.address };
+    const deployerLog = { Label: "Deploying Address", Info: deployer.address };
     // Saving the info to be logged in the table (deployer address)
     const deployerBalanceLog = {
-      Label: 'Deployer BNB Balance',
+      Label: "Deployer BNB Balance",
       Info: ethers.utils.formatEther(await deployer!.getBalance()),
     };
 
@@ -34,11 +34,10 @@ async function main() {
 
     try {
       // Verify the contract
-      await run('verify:verify', {
+      await run("verify:verify", {
         address: priceConsumerInst.address,
         constructorArguments: [],
       });
-
     } catch (error) {
       if (error instanceof NomicLabsHardhatPluginError) {
         console.log("Contract source code already verified");
@@ -50,20 +49,22 @@ async function main() {
     // Set the contract functions
     await Object.values(chainLink[network.name]).reduce(
       async (promise, value, currentIndex) => {
-      await promise;
-      const address = value;
-      if (address.length < 1) return;
-      const pairId = currentIndex + 1;
-      await priceConsumerInst.registerPriceFeed(pairId, address);
-    }, Promise.resolve());
+        await promise;
+        const address = value.aggregator;
+        if (address.length < 1) return;
+        const pairId = value.pair;
+        if (pairId.length < 1) return;
+        await priceConsumerInst.registerPriceFeed(pairId, address);
+      },
+      Promise.resolve()
+    );
 
     const priceConsumerLog = {
-      Label: 'Deployed Price Consumer Token Address',
-      Info: priceConsumerInst.address
+      Label: "Deployed Price Consumer Token Address",
+      Info: priceConsumerInst.address,
     };
 
     console.table([deployerLog, deployerBalanceLog, priceConsumerLog]);
-
   } else {
     throw new Error("Not found network");
   }

@@ -8,7 +8,7 @@ interface IPriceConsumer {
      * @param _pair Supported currency pair
      * @return latest price
      */
-    function getLatestPrice(uint32 _pair)
+    function getLatestPrice(address _pair)
         external
         view
         returns (uint256);

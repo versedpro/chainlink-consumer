@@ -6,7 +6,6 @@ import "hardhat/console.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IPriceConsumer.sol";
-import "./libraries/SupportedPair.sol";
 
 /**
  * ChainLink Price Consumer Contract for BNB/USD, BUSD/BNB,
@@ -18,25 +17,27 @@ import "./libraries/SupportedPair.sol";
  */
 contract ChainLinkPriceConsumer is Ownable, IPriceConsumer {
 
-    mapping(uint32 => address) public feedRegistry;
+    uint256 public constant defaultDigits = 8;
 
-    modifier onlySupportedPair(uint32 _pair) {
-        require(SupportedPair.isSupportedPair(_pair), "Not supported pair");
-        _;
-    }
+    mapping(address => address) public feedRegistry;
+    mapping(address => uint256) public priceDigits;
 
     /**
      * @notice Register price feed aggregator per pair
      * @param _pair Supported currency pair
      * @param _aggregatorAddress Aggregator address
      *      https://docs.chain.link/docs/binance-smart-chain-addresses/
+     * @param _digits price digits
      */
     function registerPriceFeed(
-        uint32 _pair,
-        address _aggregatorAddress
-    ) external onlyOwner onlySupportedPair(_pair) {
+        address _pair,
+        address _aggregatorAddress,
+        uint256 _digits
+    ) external onlyOwner {
+        require(_pair != address(0), "Non zero pair");
         require(_aggregatorAddress != address(0), "Non zero aggregator");
         feedRegistry[_pair] = _aggregatorAddress;
+        priceDigits[_pair] = _digits;
     }
 
     /**
@@ -48,11 +49,10 @@ contract ChainLinkPriceConsumer is Ownable, IPriceConsumer {
      * @return updatedAt Timestamp of when the round was updated
      * @return answeredInRound Timestamp of when the round was updated
      */
-    function getLatestRoundData(uint32 _pair)
+    function getLatestRoundData(address _pair)
         external
         view
         onlyOwner
-        onlySupportedPair(_pair)
         returns
     (
         uint80 roundId,
@@ -61,6 +61,7 @@ contract ChainLinkPriceConsumer is Ownable, IPriceConsumer {
         uint updatedAt,
         uint80 answeredInRound
     ) {
+        require(_pair != address(0), "Non zero pair");
         address priceFeed = feedRegistry[_pair];
         require(priceFeed != address(0), "Not registered pair");
 
@@ -72,17 +73,17 @@ contract ChainLinkPriceConsumer is Ownable, IPriceConsumer {
      * @param _pair Supported currency pair
      * @return the latest price
      */
-    function getLatestPrice(uint32 _pair)
+    function getLatestPrice(address _pair)
         external
         override
         view
-        onlySupportedPair(_pair)
         returns (uint256)
     {
+        require(_pair != address(0), "Non zero pair");
         address priceFeed = feedRegistry[_pair];
         require(priceFeed != address(0), "Not registered pair");
 
         (, int price,,,) = AggregatorV3Interface(priceFeed).latestRoundData();
-        return uint256(price);
+        return uint256(price) / 10 ** (priceDigits[_pair] - defaultDigits);
     }
 }
