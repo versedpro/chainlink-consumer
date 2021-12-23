@@ -54,7 +54,8 @@ async function main() {
         if (address.length < 1) return;
         const pairId = value.pair;
         if (pairId.length < 1) return;
-        await priceConsumerInst.registerPriceFeed(pairId, address);
+        const digits = value.digits;
+        await priceConsumerInst.registerPriceFeed(pairId, address, digits);
       },
       Promise.resolve()
     );
