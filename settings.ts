@@ -43,7 +43,7 @@ export const chainLink = {
     LINKUSD: {
       pair: "",
       digits: 8,
-      aggregator: "	0xca236E327F629f9Fc2c30A4E95775EbF0B89fac8",
+      aggregator: "0xca236E327F629f9Fc2c30A4E95775EbF0B89fac8",
     },
   },
   testnet: {
